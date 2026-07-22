@@ -31,8 +31,12 @@ function initSocket() {
     socket.disconnect();
   }
 
-  // Connect to the configured backend URL
-  socket = io(backendUrl);
+  // Connect to the configured backend URL with tunnel bypass headers
+  socket = io(backendUrl, {
+    extraHeaders: {
+      "bypass-tunnel-reminder": "true"
+    }
+  });
 
   // Handle connection status
   socket.on('connect', () => {
@@ -231,9 +235,12 @@ fileInput.addEventListener('change', async (e) => {
       formData.append('chunkIndex', chunkIndex);
       formData.append('totalChunks', totalChunks);
 
-      // Upload Chunk to backend URL
+      // Upload Chunk to backend URL with bypass header
       await fetch(`${backendUrl}/upload-chunk`, {
         method: 'POST',
+        headers: {
+          'bypass-tunnel-reminder': 'true'
+        },
         body: formData
       });
 
@@ -249,7 +256,8 @@ fileInput.addEventListener('change', async (e) => {
     const mergeRes = await fetch(`${backendUrl}/merge-chunks`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'bypass-tunnel-reminder': 'true'
       },
       body: JSON.stringify({
         fileId,

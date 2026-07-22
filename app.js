@@ -1,0 +1,250 @@
+// Initialize Socket.io
+const socket = io();
+
+// UI Elements
+const loginOverlay = document.getElementById('login-overlay');
+const loginForm = document.getElementById('login-form');
+const usernameInput = document.getElementById('username-input');
+const chatWorkspace = document.getElementById('chat-workspace');
+const messagesContainer = document.getElementById('messages-container');
+const chatForm = document.getElementById('chat-form');
+const messageInput = document.getElementById('message-input');
+const fileInput = document.getElementById('file-input');
+const displayUsername = document.getElementById('display-username');
+const connectionStatus = document.getElementById('connection-status');
+const statusIndicator = document.querySelector('.status-indicator');
+
+// Upload UI Elements
+const uploadProgressContainer = document.getElementById('upload-progress-bar-container');
+const uploadFilename = document.getElementById('upload-filename');
+const uploadPercentage = document.getElementById('upload-percentage');
+const progressFill = document.getElementById('progress-fill');
+const uploadBytes = document.getElementById('upload-bytes');
+
+// App State
+let username = localStorage.getItem('chat_username') || '';
+
+// Handle connection status
+socket.on('connect', () => {
+  connectionStatus.textContent = 'Connected (SQLite Live)';
+  statusIndicator.className = 'status-indicator online';
+});
+
+socket.on('disconnect', () => {
+  connectionStatus.textContent = 'Disconnected. Retrying...';
+  statusIndicator.className = 'status-indicator';
+});
+
+// Auto login if username is cached
+if (username) {
+  loginOverlay.classList.remove('active');
+  displayUsername.textContent = username;
+} else {
+  loginOverlay.classList.add('active');
+}
+
+// Handle Username Submission
+loginForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const val = usernameInput.value.trim();
+  if (val) {
+    username = val;
+    localStorage.setItem('chat_username', username);
+    loginOverlay.classList.remove('active');
+    displayUsername.textContent = username;
+  }
+});
+
+// Format file size
+function formatBytes(bytes, decimals = 2) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+// Render message helper
+function renderMessage(msg) {
+  const isSelf = msg.username === username;
+  const row = document.createElement('div');
+  row.className = `message-row ${isSelf ? 'outgoing' : 'incoming'}`;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'message-bubble';
+
+  const meta = document.createElement('div');
+  meta.className = 'msg-meta';
+
+  const author = document.createElement('span');
+  author.className = 'msg-author';
+  author.textContent = msg.username;
+
+  const time = document.createElement('span');
+  time.className = 'msg-time';
+  const d = new Date(msg.timestamp);
+  time.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  meta.appendChild(author);
+  meta.appendChild(time);
+  bubble.appendChild(meta);
+
+  // If message has text (default fallback if not a file, or file description)
+  const text = document.createElement('div');
+  text.className = 'msg-text';
+  
+  if (msg.fileUrl) {
+    text.textContent = msg.text || `Shared a file`;
+    bubble.appendChild(text);
+
+    // Render attachment based on file type
+    const mime = msg.fileType || '';
+    if (mime.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = msg.fileUrl;
+      img.alt = msg.fileName;
+      
+      const attachment = document.createElement('div');
+      attachment.className = 'media-attachment';
+      attachment.appendChild(img);
+      bubble.appendChild(attachment);
+    } else if (mime.startsWith('video/')) {
+      const video = document.createElement('video');
+      video.src = msg.fileUrl;
+      video.controls = true;
+      video.preload = 'metadata';
+
+      const attachment = document.createElement('div');
+      attachment.className = 'media-attachment';
+      attachment.appendChild(video);
+      bubble.appendChild(attachment);
+    } else {
+      // General file download card
+      const fileCard = document.createElement('a');
+      fileCard.href = msg.fileUrl;
+      fileCard.className = 'file-link-card';
+      fileCard.target = '_blank';
+      fileCard.download = msg.fileName;
+
+      const fileIcon = document.createElement('span');
+      fileIcon.className = 'file-icon';
+      fileIcon.textContent = '📄';
+
+      const fileDetails = document.createElement('div');
+      fileDetails.className = 'file-details';
+
+      const fileName = document.createElement('span');
+      fileName.className = 'file-name';
+      fileName.textContent = msg.fileName;
+
+      const fileSize = document.createElement('span');
+      fileSize.className = 'file-size';
+      fileSize.textContent = formatBytes(msg.fileSize || 0);
+
+      fileDetails.appendChild(fileName);
+      fileDetails.appendChild(fileSize);
+      fileCard.appendChild(fileIcon);
+      fileCard.appendChild(fileDetails);
+      bubble.appendChild(fileCard);
+    }
+  } else {
+    text.textContent = msg.text;
+    bubble.appendChild(text);
+  }
+
+  row.appendChild(bubble);
+  messagesContainer.appendChild(row);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Receive Message History
+socket.on('history', (history) => {
+  messagesContainer.innerHTML = '';
+  history.forEach(renderMessage);
+});
+
+// Receive New Live Messages
+socket.on('message', renderMessage);
+
+// Handle Chat Submission
+chatForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const text = messageInput.value.trim();
+  if (text) {
+    socket.emit('message', { username, text });
+    messageInput.value = '';
+    messageInput.focus();
+  }
+});
+
+// File Upload Handler (Chunked Uploading for files >1GB)
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const CHUNK_SIZE = 1024 * 1024 * 5; // 5MB Chunk Size
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  
+  // Show progress bar container
+  uploadProgressContainer.classList.remove('hidden');
+  uploadFilename.textContent = file.name;
+  
+  try {
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end);
+
+      const formData = new FormData();
+      formData.append('chunk', chunk, `${file.name}.part_${chunkIndex}`);
+      formData.append('fileId', fileId);
+      formData.append('chunkIndex', chunkIndex);
+      formData.append('totalChunks', totalChunks);
+
+      // Upload Chunk
+      await fetch('/upload-chunk', {
+        method: 'POST',
+        body: formData
+      });
+
+      // Update progress details
+      const bytesUploaded = Math.min((chunkIndex + 1) * CHUNK_SIZE, file.size);
+      const percent = Math.round((bytesUploaded / file.size) * 100);
+      progressFill.style.width = `${percent}%`;
+      uploadPercentage.textContent = `${percent}%`;
+      uploadBytes.textContent = `${formatBytes(bytesUploaded)} / ${formatBytes(file.size)}`;
+    }
+
+    // Call Merge endpoint when all chunks are sent
+    const mergeRes = await fetch('/merge-chunks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        fileId,
+        fileName: file.name,
+        totalChunks,
+        fileType: file.type,
+        fileSize: file.size,
+        username
+      })
+    });
+
+    const mergeResult = await mergeRes.json();
+    if (!mergeResult.success) {
+      alert('Upload failed during server file merging.');
+    }
+  } catch (err) {
+    console.error('Upload Error:', err);
+    alert('An error occurred during file upload.');
+  } finally {
+    // Hide progress bar container and reset inputs
+    uploadProgressContainer.classList.add('hidden');
+    progressFill.style.width = '0%';
+    uploadPercentage.textContent = '0%';
+    fileInput.value = '';
+  }
+});

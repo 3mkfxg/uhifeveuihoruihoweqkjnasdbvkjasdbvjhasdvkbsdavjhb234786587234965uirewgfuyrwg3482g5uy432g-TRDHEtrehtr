@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveStream Chat - Free Unlimited Sharing</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <!-- Socket.io client library -->
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <!-- Background Decorative Blobs -->
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <div id="app-container">
+    <!-- Username Setup Overlay -->
+    <div id="login-overlay" class="overlay active">
+      <div class="login-card glass">
+        <h2>Welcome to LiveStream Chat</h2>
+        <p>Enter a username to join the live chat room.</p>
+        <form id="login-form">
+          <input type="text" id="username-input" placeholder="Your username..." required autocomplete="off">
+          <button type="submit">Join Chat</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Main Chat Workspace -->
+    <main id="chat-workspace" class="glass">
+      <!-- Sidebar / Status -->
+      <section id="sidebar">
+        <div class="logo">
+          <span class="logo-icon">⚡</span>
+          <h1>LiveStream</h1>
+        </div>
+        
+        <div class="status-panel">
+          <div class="status-item">
+            <span class="status-indicator online"></span>
+            <span id="connection-status">Connecting to Local Database...</span>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <h3>Local Tunnel Info</h3>
+          <p>Expose this server online so others can connect and upload files up to any size completely free.</p>
+          <div class="tunnel-code">
+            <code>npx localtunnel --port 3000</code>
+          </div>
+        </div>
+
+        <div class="user-profile">
+          <span class="avatar" id="user-avatar">👤</span>
+          <span class="username" id="display-username">Anonymous</span>
+        </div>
+      </section>
+
+      <!-- Chat Screen -->
+      <section id="chat-area">
+        <!-- Chat Header -->
+        <header id="chat-header">
+          <div class="room-title">
+            <h2>Public Lobby</h2>
+            <p>Live messages & unlimited size media sharing</p>
+          </div>
+        </header>
+
+        <!-- Message Panel -->
+        <div id="messages-container">
+          <!-- Messages will load here dynamically -->
+        </div>
+
+        <!-- Progress Overlay for Uploads -->
+        <div id="upload-progress-bar-container" class="hidden">
+          <div class="upload-info">
+            <span id="upload-filename">video.mp4</span>
+            <span id="upload-percentage">0%</span>
+          </div>
+          <div class="progress-track">
+            <div id="progress-fill" style="width: 0%"></div>
+          </div>
+          <div class="upload-speed-info">
+            <span id="upload-bytes">0 / 0 MB</span>
+          </div>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <footer id="chat-footer">
+          <form id="chat-form">
+            <label for="file-input" class="attach-btn" title="Upload Video or File (>1GB supported)">
+              📎
+              <input type="file" id="file-input" style="display: none;">
+            </label>
+            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+            <button type="submit" id="send-btn">Send</button>
+          </form>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

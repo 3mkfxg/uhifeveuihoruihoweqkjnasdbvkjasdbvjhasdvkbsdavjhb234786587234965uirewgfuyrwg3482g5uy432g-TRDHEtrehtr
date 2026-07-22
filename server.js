@@ -176,9 +176,27 @@ io.on('connection', async (socket) => {
     }
   });
 
+  // Handle client errors to prevent unhandled socket events from crashing
+  socket.on('error', (err) => {
+    console.error(`Socket error for client ${socket.id}:`, err);
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
+});
+
+// Prevent server-level socket errors from crashing the app
+server.on('error', (err) => {
+  console.error('HTTP Server error:', err);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('CRITICAL: Uncaught Exception caught to prevent crash:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('CRITICAL: Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 // Start the server

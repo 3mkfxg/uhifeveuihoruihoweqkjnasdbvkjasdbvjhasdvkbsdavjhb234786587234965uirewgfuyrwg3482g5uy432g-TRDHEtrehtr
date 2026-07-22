@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LiveStream Chat - Free Unlimited Sharing</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-  <!-- Socket.io client library -->
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- Socket.io client library from CDN (allows loading when frontend is hosted on GitHub Pages) -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
 <body>
   <!-- Background Decorative Blobs -->
@@ -21,9 +21,10 @@
     <div id="login-overlay" class="overlay active">
       <div class="login-card glass">
         <h2>Welcome to LiveStream Chat</h2>
-        <p>Enter a username to join the live chat room.</p>
+        <p>Enter your username and your LocalTunnel link.</p>
         <form id="login-form">
           <input type="text" id="username-input" placeholder="Your username..." required autocomplete="off">
+          <input type="text" id="backend-input" placeholder="Offline Backend URL (e.g. https://xyz.loca.lt)" required autocomplete="off">
           <button type="submit">Join Chat</button>
         </form>
       </div>
@@ -103,6 +104,6 @@
     </main>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>
